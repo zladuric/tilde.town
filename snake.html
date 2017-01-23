@@ -1,0 +1,553 @@
+<html>
+<head>
+<title>~zladuric</title>
+<style type="text/css">
+  body {
+    font-family: courier;
+  }
+  .page-wrap {
+    width: 66em;
+    margin: 0 auto;
+  }
+  .story {
+    /* height: 8em; */
+  }
+  .snake {
+    border: 1px dotted grey;
+    width: 400px;
+    height: 400px
+  }
+  .inlined {
+    border: 1px solid gray;
+    border-radius: 4px;
+    width: 250px;
+    height: 190px;
+  }
+  .inner-list {
+    list-style-type: none;
+  }
+  .img-square {
+    width: 200px;
+    height: 200px;
+  }
+  .grid {
+    width: 100%;
+  }
+  .grid:after {
+    content: "";
+    display: table;
+    clear: both;
+  }
+  .cell {
+    width: 50%;
+    float: left;
+  }
+
+
+</style>
+</head>
+<body>
+
+  <div class="page-wrap">
+
+    <header>
+      <h1>welcome to ~zladuric</h1>
+
+      <p>Let's make a snake!!</p>
+    </header>
+
+
+
+
+     <sy: table;
+       clear: both;
+       }ection class="main-content">
+      <article>
+        <h2>Making of.</h2>
+        <ul class="steps">
+          <li>First, I've made a canvas, id #snake.</li>
+          <li>Now, let's add a script and get a hold of the canvas.</li>
+          <li>Fourth, I'm moving the rest of <strong>the making of</strong>
+            bellow the canvas so I can always see the game.</li>
+        </ul>
+        <p><strong>WASD</strong> or arrow keys to move the snake.</p>
+      </article>
+      <article class="grid">
+        <div class="cell">
+          <canvas id="snake" class="snake" width="400" height="400"></canvas>
+        </div>
+        <div class="cell">
+          <button id="freeze-button">Freeze</button>
+        </div>
+      </article>
+      <article class="story">
+        <h2>Making of, continued.</h2>
+        <ul class="steps">
+          <li>
+            <div>
+              <p>
+                So I've added a function called <em>Snake</em> that's going to
+                be the bulk of the snake game.Outside of it, I've set the DOT_SIZE
+                and WIDTH and HEIGHT of canvas, as absolutes (so I can easily play
+                with it later.
+              </p>
+              <p>
+                Within the constructor, I've set width and height in
+                "dot" units (e.g. <code>this.width = WIDTH / DOT_SIZE</code>) and set
+                locals (<code>this.x</code> and <code>this.y</code>) to half the width and
+                height.
+              </p>
+              <p>Now I'll try to grab the canvas and draw a "dot" at <code>[x, y].</code></p>
+            </div>
+          </li>
+          <li>
+            <p>Ok, dot drawn. Basically
+              <code>ctx = document.querySelector('#snake').getContext('2d');, ctx.beginPath(); ctx.arc(...); ctx.fill();</code>
+            </p>
+          </li>
+          <li>
+            <p>Now I'll try to grab keyboard events.</p>
+            <p>Let's see: I've made a basic KeyboardListener prototype that
+            pretends it's an EventEmitter and listens to arrows and
+            <em>WASD</em>. Let's add it to the snake.</p>
+          </li>
+          <li>
+            <p> No, wait, I've added a <em>repeat interval</em> thingy to the
+              KeyboardListener. Now if you press and hold a key, it'll wait for
+              half a sec, then trigger the "move" event again and repeat every
+              200 milliseconds.
+            </p>
+          </li>
+          <li>
+            <p>
+            I've added a <code>startTicks</code>method to <code>Snake</code>.
+            It will run a <code>setInterva</code>every second (actually every
+            MOVE_INTERVAL millis) and try to move our dot in that direction.
+            The moving part is done by a <code>move</code> method. Oh well.
+            </p>
+            <p>The same gor a <code>GROW_INTERVAL</code>. Now, the cool thing,
+            is that it works - I can now move the snake, it'll get redrawn. I
+            am still not clearing screens on ticks, I wanna get the sizing
+            thing figured out first.
+            </p>
+
+            <p> The only problem is I've replaced up-down with left-right so
+            let's remap thise <code>this.x, this.y</code> bits.
+            </p>
+            <p>Oh, I'm speeding it up for development purposes.</p>
+          </li>
+          <li>Oh, nice:
+            <p><a href="img/snake.png">
+              <img class="inlined" src="img/snake.png"></a></p>
+          </li>
+          <li>But I'm done for the night.</li>
+          <li>Except that the towners said nice things about this, so now I
+            can't quit!</li>
+          <li>
+            <p>Now I need to make the snake not just leave the black trail,
+            but rather grow in size. I'll try +1 for every tick.
+            How to do that? I have two ideas. And it appears the townies
+            suggest the easier one. So, the easy idea is to just keep a
+            list of the tail coordinates in an array. As in, head would be
+            <code>[x, y]</code> and the tail is <code>[ [x, y - 1], [x, y - 2], [x + 1, y - 2] ]</code>
+            etc etc. It could grow a bit, but shouldn't be too hard. And
+            it's going to be easier to get the matches (as in, did we crash
+            into something).
+            </p>
+            <p>The other idea I've had is to keep tail as a bunch of pointers:
+            <code>['down', 'left', 'left', 'up'...]</code> but that would be a
+            nightmare to calculate redraws on changing directions.
+            <a href="/~selfsame">selfsame</a> says he went with the second
+            version <a href="https://selfsame.itch.io/dual-snake">here</a>.
+            <br>Kudos!
+            </p>
+            <p>So let's build the easy version.</p>
+          </li>
+          <li>
+            <p>
+            So how it's supposed to work? E.g.
+            <ul class="inner-list">
+              <li>Head is at X, Y, say, <code>[5, 7]</code>. Going up.</li>
+              <li>Tail has size 3.E.g.
+                <code>[[5, 6], [5, 5], [4, 5]</code>
+              </li>
+              <li>We move head one more up. <code>[5, 8]</code>.</li>
+              <li>
+                We move the first tail-part to where the head <em>was</em>.
+              </li>
+              <li>We move the next part to where the one before was.</li>
+              <li>Go on until we get them all moved.</li>
+              <li>If size of the snake is greater than current (we grew on
+                last tick), add one more part to where the last tail part was.
+              </li>
+            </ul>
+            </p>
+            <p>So, something like:
+            <pre><code>
+            tail.unshift(head);
+              if (tail.length > size - 1) {
+                tail.pop();
+              }
+            </code></pre>
+          </li>
+          <li><p>Woot! Woot!<br> Ok, some glitches, but still!</p>
+            <p><a href="img/snake1.png"><img class="inlined img-square"
+                                             src="img/snake1.png"></a>
+            </p>
+            <p>So, next: collision detection (so we don't drive over ourselves
+            and remove that glitch when wall-crossing.</p>
+
+          </li>
+          <li>But before that, I've added <code>freeze</code> and <code>
+              unfreeze</code> methods and bound to a button-click so we can
+            stop and inspect the state when needed.</li>
+        </ul>
+      <script>
+// Set "constants". I'm not using ES6 or anything here, although I should.
+var WIDTH = 400;
+var HEIGHT = 400;
+
+var DOT_SIZE = 6; // pixels.
+
+var MOVE_INTERVAL = 500; // move every second.
+var GROW_INTERVAL = 5 * MOVE_INTERVAL;
+
+function Snake() {
+   this.width = Math.floor(WIDTH / DOT_SIZE);
+   this.height = Math.floor(HEIGHT / DOT_SIZE);
+
+   this.x = this.width / 2;
+   this.y = this.height / 2;
+   this.tail = [];
+
+   this.direction = '';
+   this.size = 1;
+
+   this.moveInterval = null;
+   this.growInterval = null;
+
+   this.canvas = document.querySelector('#snake');
+   this.cx = this.canvas.getContext('2d');
+   this.redraw();
+   this.keyboardListener = new KeyboardListener();
+   this.keyboardListener.on('move', function(direction) {
+     console.log('Move:', direction);
+     if (direction) {
+       console.log('Changing dir:', direction);
+       this.direction = direction;
+     }
+  }.bind(this));
+  this.startTicks();
+  this.bindUI();
+}
+
+// Draw a dot at [x, y].
+Snake.prototype.dot = function dot(x, y) {
+  this.cx.beginPath();
+  this.cx.arc(x * DOT_SIZE, y * DOT_SIZE, DOT_SIZE / 2, 0, 2 * Math.PI, true);
+  this.cx.fill();
+}
+
+// Redraws the snake. Draw the head, then all tail dots.
+Snake.prototype.redraw = function redraw() {
+  this.clear();
+  this.dot(this.x, this.y);
+  for (var i = 0; i < this.tail.length; i++) {
+    var coord = this.tail[i];
+    this.dot(coord[0], coord[1]);
+  }
+}
+
+// Clear the canvas.
+Snake.prototype.clear = function clear() {
+  this.cx.clearRect(0, 0, WIDTH, HEIGHT);
+}
+
+// setup move interval bumps and grow interval bumps.
+Snake.prototype.startTicks = function startTicks() {
+  // Setup an interval repeater which checks if we have a direction every 30s.
+  // If yes, move in that direction.
+  this.moveInterval = setInterval(function() {
+    if (this.direction) {
+      this.move();
+    }
+    this.redraw();
+  }.bind(this), MOVE_INTERVAL);
+  // setup one more, to "grow" the snake length
+  this.growInterval = setInterval(function() {
+    this.size = this.size + 1;
+  }.bind(this), GROW_INTERVAL);
+}
+
+// Moves our [x, y] coords in the current `direction`.
+Snake.prototype.move = function move() {
+  console.log('Move', this.direction);
+  if (!this.direction) {
+    return;
+  }
+  var oldHead = [this.x, this.y];
+  if (this.direction === 'up') {
+    this.y = this.y - 1;
+    if (this.y < 1) {
+      this.y = this.height;
+    }
+  } else if (this.direction === 'down') {
+    this.y = this.y + 1;
+    if (this.y >= this.height) {
+      this.y = 0;
+    }
+  } else if (this.direction === 'left') {
+    this.x = this.x - 1;
+    if (this.x < 1) {
+      this.x = this.width;
+    }
+  } else if (this.direction === 'right') {
+    this.x = this.x + 1;
+    if (this.x >= this.width) {
+      this.x = 0;
+    }
+  }
+  // Now let's move the tail.
+  // Start from the beginning of the array, move it to where the head was.
+  // Then move the next one to its place etc etc.
+  // Let's try to do it in place.
+
+  this.tail.unshift(oldHead);
+  // Also we probably didn't grow, so lose the tail :P
+  if (this.size < this.tail.length + 1) {
+    this.tail.pop();
+  }
+};
+
+// Bind to UI widgets.
+Snake.prototype.bindUI = function bindUI() {
+  var button = document.querySelector('#freeze-button');
+  var stopped;
+  var lastDir;
+  button.onclick = function() {
+    if (stopped) {
+      this.direction = lastDir;
+      stopped = false;
+      this.unfreeze();
+      button.innerHTML = 'Freeze';
+    } else {
+      lastDir = this.direction;
+      stopped = true;
+      button.innerHTML = 'Unfreeze';
+      this.freeze();
+    }
+  }.bind(this);
+};
+
+// Stop the snake.
+Snake.prototype.freeze = function freeze() {
+  this.direction = '';
+  clearInterval(this.moveInterval);
+  clearInterval(this.growInterval);
+};
+
+// Restart
+Snake.prototype.unfreeze = function unfreeze() {
+  this.startTicks();
+};
+
+
+// Ok, let's make a keyboard navigation :)
+// listen to keyboard, specifically these down there.
+
+var KEYS = {
+  UP_ARROW: 38,
+  DOWN_ARROW: 40,
+  LEFT_ARROW: 37,
+  RIGHT_ARROW: 39,
+  W: 87,
+  S: 83,
+  A: 65,
+  D: 68,
+};
+
+var DEFAULT_DELAY = 500;
+var DEFAULT_REPEAT_INTERVAL = 200;
+
+// constructor.
+
+function KeyboardListener(options) {
+  // Setup locals here so it's clear what we have.
+  options = options || {};
+  // Direction we're moving
+  this.direction = '';
+  // setInterval handle for repeated key presses
+  this.intervalHandle = null;
+  this.timeoutHandle = null;
+  this.delay = options.delay || DEFAULT_DELAY;
+  this.interval = options.repeatInterval || DEFAULT_REPEAT_INTERVAL;
+  // fake, simplified event listener
+  this.events = {};
+
+  // Finally, bind to the document.
+  document.addEventListener('keydown',this.keyDownHandler.bind(this), false);
+  document.addEventListener('keyup',this.keyUpHandler.bind(this), false);
+};
+
+
+/**
+ * Listens for keyDown and triggers a move, if possible.
+ * If there's no release within a predefined delay, we simulate repeated press
+ * on a default interval.
+ *
+ * Also, we pretend we're a simple EventEmitter. We have an 'on' and 'once', a
+ * 'removeListener' and 'emit'. So subscribers would instantiate this, then
+ * subscribe to our `move` event. (We ignore subs to other events.)
+ * @param  {Object} event keypress event.
+ * @return
+ */
+KeyboardListener.prototype.keyDownHandler = function(event) {
+  if (event.keyCode === KEYS.UP_ARROW || event.keyCode === KEYS.W) {
+    // up arrow or W
+    this.direction = 'up';
+  } else if (event.keyCode === KEYS.DOWN_ARROW || event.keyCode === KEYS.S) {
+    // down arrow or S
+    this.direction = 'down';
+  } else if (event.keyCode === KEYS.LEFT_ARROW || event.keyCode === KEYS.A) {
+    this.direction = 'left';
+  } else if (event.keyCode === KEYS.RIGHT_ARROW || event.keyCode === KEYS.D) {
+    this.direction = 'right';
+  }
+  this.emit('move', this.direction);
+  // setup/reset repeated keypress listeners if needed.
+  this.setupTimeouts();
+};
+
+/**
+ * Listens for key release. Calls all the subscribed handlers.
+ * @param  {Object} event Which key was it
+ * @return
+ */
+KeyboardListener.prototype.keyUpHandler = function(event) {
+  this.direction = '';
+  this.clearTimeouts();
+};
+
+/**
+ * Sets up a timeout to repeat the keypress. After the delay, if the key is
+ * still down, we setup an interval repeater.
+ * @return
+ */
+KeyboardListener.prototype.setupTimeouts = function() {
+  if (this.intervalHandle) {
+    clearInterval(this.intervalHandle);
+    this.intervalHandle = null;
+  }
+  if (this.timeoutHandle) {
+    clearTimeout(this.timeoutHandle);
+    this.timeoutHandle = null;
+  }
+  this.timeoutHandle = setTimeout(function() {
+    this.emit('move', this.direction);
+    this.intervalHandle = setTimeout(function() {
+      this.emit('move', this.direction);
+    }.bind(this), this.repeatInterval);
+  }.bind(this), this.delay);
+};
+
+/**
+ * Clears local timeout/interval handlers.
+ * @return
+ */
+KeyboardListener.prototype.clearTimeouts = function() {
+  if (this.timeoutHandle) {
+    clearTimeout(this.timeoutHandle);
+    this.timeoutHandle = null;
+  }
+  if (this.intervalHandle) {
+    clearInterval(this.intervalHandle);
+    this.intervalHandle = null;
+  }
+};
+
+/**
+ * subscriber function. Allows the main app module to subscribe to our events
+ * (or rather, our `move` event).
+ * @param  {String} event    event we're interested in
+ * @param  {Function} listener handler for that event
+ * @return
+ */
+KeyboardListener.prototype.on = function (event, listener) {
+  if (typeof this.events[event] !== 'object') {
+    this.events[event] = [];
+  }
+  this.events[event].push(listener);
+};
+
+/**
+ * For completenes (not sure if Wijmo would consider us a real EE),we have an
+ * `once` subscribe method.
+ * @param  {string} event    Event we want to listen to.
+ * @param  {Function} listener listener.
+ * @return
+ */
+KeyboardListener.prototype.once = function (event, listener) {
+    this.on(event, function sub() {
+        this.removeListener(event, sub);
+        listener.apply(this, arguments);
+    }.bind(this));
+};
+
+/**
+ * Internal event emitter. Calls anybody subscribed to a given event.
+ * @param  {object} event Event
+ * @return
+ */
+KeyboardListener.prototype.emit = function (event) {
+  if (typeof this.events[event] === 'object') {
+    const args = [].slice.call(arguments, 1);
+    const listeners = this.events[event].slice();
+    for (let i = 0; i < listeners.length; i++) {
+      listeners[i].apply(this, args);
+    }
+  }
+};
+
+/**
+ * When you're sick of our events, unsubscribe.
+ * @param  {string} event    Event we're unsubscribing from.
+ * @param  {function} listener The listener we wanna remove.
+ * @return
+ */
+KeyboardListener.prototype.removeListener = function (event, listener) {
+    if (typeof this.events[event] === 'object') {
+      const idx = indexOf(this.events[event], listener);
+      if (idx > -1) {
+        this.events[event].splice(idx, 1);
+      }
+    }
+};
+
+// Finally, let's make the snake.
+
+window.snake = new Snake();
+      </script>
+    </section>
+
+
+
+
+
+    <footer>
+      <div id="tilde_ring" style="background-color:white; text-align:center; border-radius:10px;">
+        <p><em>a member of the tilde.town ~ring</em></p>
+        <p> <a id="tilde_town_ring" class="tilde_ring_link" href="">random ~user</a>
+          | <a id="random_tildebox" class="tilde_ring_link" href="">random ~box</a>
+          | <a id="tilde_town_ring_next" class="tilde_ring_link" href="">next ~user</a> </p>
+        <p><a href="https://tilde.town/~um/tilde_ring/join.html">join</a></p>
+        <p> back to <a href="https://tilde.town">Tilde town</a></p> 
+        <script type="text/javascript">
+          var ringjs = document.createElement('script')
+          ringjs.src = document.location.protocol + '//tilde.town/~um/tilde_ring/tilde_ring.js'
+          document.getElementById('tilde_ring').appendChild(ringjs)
+        </script>
+        </div>
+    </footer>
+  </div>
+</body>
+</html>
