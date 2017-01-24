@@ -201,6 +201,46 @@
           <li>But before that, I've added <code>freeze</code> and <code>
               unfreeze</code> methods and bound to a button-click so we can
             stop and inspect the state when needed.</li>
+          <li>Thought I'd add that I'm trying to add <em>all</em> the 
+            properties of the Snake class in the Snake constructor. It probably
+            doesn't matter,it's not like I'll have a huge number of these all at once anyway.
+          </li>
+          <li><p>Now, about that collision detection. I need to be able to detect,
+            on the "move" call, if the tile I'm stepping into occupied or not.
+            Now, off the top of my head, I can think of two ways. One is to
+            check if <code>[x, y]</code> is already within the snake. If yes, 
+            bummer, if no, all ok. The thing is, I might be adding other
+            objects on the game board later.
+            </p>
+            <p>
+            So the other idea is that the game board itself holds a list of
+            the objects on it, and it exposes an API to check if a tile is
+            ocupied or not.</p>
+            <p>But since the "game board" right now is a canvas and it doesn't
+            even have a state or anything, I'll just go with the first idea.</p>
+          </li>
+          <li>
+            <p>Wow! That was unexpectedly long. First, collision detection was
+            easy. We now have a <code>snake.isOccupied(x, y)</code> which
+            returns true or false. So our <code>move()</code> call will first
+            check if the new position is occupied before moving the snake. If
+            yes, we call a <code>this.collide();</code> and bail.
+            </p>
+            <p>
+            Now that collide function was interesting. I'm painting a red dot
+            over the intended (occupied) spot, with the same <code>this.dot</code>
+            but it doesn't work! So I find out you need to <code>context.closePath()</code>
+            if you're painting with <code>arc()</code>.
+            </p>
+            <p>But still no luck! Even when I manually draw another, red dot,
+            wherever, it's still all gray. Only when I, after the game was over,
+            manually grabbed that context and snake and drew a dot (<code>snake.dot(x, y, color)</code>
+            did I get a dot. Why? Then I realized - in my ticker, I call
+            <code>this.move</code> then <code>this.redraw</code>. So I was
+            overwriting my shiny new red dot!</p>
+            <p>Anyway, now we have collision detection.</p>
+            <p>Next up, score!</p>
+          </li>
         </ul>
       <script>
 // Set "constants". I'm not using ES6 or anything here, although I should.
@@ -209,7 +249,7 @@ var HEIGHT = 400;
 
 var DOT_SIZE = 6; // pixels.
 
-var MOVE_INTERVAL = 500; // move every second.
+var MOVE_INTERVAL = 100; // move every second.
 var GROW_INTERVAL = 5 * MOVE_INTERVAL;
 
 function Snake() {
@@ -225,14 +265,14 @@ function Snake() {
 
    this.moveInterval = null;
    this.growInterval = null;
+   this.gameOver = false;
 
    this.canvas = document.querySelector('#snake');
    this.cx = this.canvas.getContext('2d');
    this.redraw();
    this.keyboardListener = new KeyboardListener();
    this.keyboardListener.on('move', function(direction) {
-     console.log('Move:', direction);
-     if (direction) {
+     if (direction && this.direction !== direction) {
        console.log('Changing dir:', direction);
        this.direction = direction;
      }
@@ -242,9 +282,19 @@ function Snake() {
 }
 
 // Draw a dot at [x, y].
-Snake.prototype.dot = function dot(x, y) {
+Snake.prototype.dot = function dot(x, y, color) {
+  if (this.gameOver) {
+    // prevent delayed frames coming in
+    return;
+  }
+  if (!color) {
+    color = 'gray';
+  }
+  this.cx.fillStyle = color;
+  console.log('Style:', this.cx.fillStyle);
   this.cx.beginPath();
   this.cx.arc(x * DOT_SIZE, y * DOT_SIZE, DOT_SIZE / 2, 0, 2 * Math.PI, true);
+  this.cx.closePath();
   this.cx.fill();
 }
 
@@ -265,13 +315,15 @@ Snake.prototype.clear = function clear() {
 
 // setup move interval bumps and grow interval bumps.
 Snake.prototype.startTicks = function startTicks() {
+  if (this.gameOver) {
+    return false;
+  }
   // Setup an interval repeater which checks if we have a direction every 30s.
   // If yes, move in that direction.
   this.moveInterval = setInterval(function() {
     if (this.direction) {
       this.move();
     }
-    this.redraw();
   }.bind(this), MOVE_INTERVAL);
   // setup one more, to "grow" the snake length
   this.growInterval = setInterval(function() {
@@ -281,32 +333,46 @@ Snake.prototype.startTicks = function startTicks() {
 
 // Moves our [x, y] coords in the current `direction`.
 Snake.prototype.move = function move() {
-  console.log('Move', this.direction);
+  if (this.gameOver) {
+    return;
+  }
   if (!this.direction) {
     return;
   }
   var oldHead = [this.x, this.y];
+  var x = this.x;
+  var y = this.y;
   if (this.direction === 'up') {
-    this.y = this.y - 1;
+    y = this.y - 1;
     if (this.y < 1) {
-      this.y = this.height;
+      y = this.height;
     }
   } else if (this.direction === 'down') {
-    this.y = this.y + 1;
+    y = this.y + 1;
     if (this.y >= this.height) {
-      this.y = 0;
+      y = 0;
     }
   } else if (this.direction === 'left') {
-    this.x = this.x - 1;
+    x = this.x - 1;
     if (this.x < 1) {
-      this.x = this.width;
+      x = this.width;
     }
   } else if (this.direction === 'right') {
-    this.x = this.x + 1;
+    x = this.x + 1;
     if (this.x >= this.width) {
-      this.x = 0;
+      x = 0;
     }
   }
+  // First, check the collision.
+  var collision = this.isOccupied(x, y);
+  if (collision) {
+    console.log('Collision on [', x, ', ', y, ']');
+    return this.collide(x, y);
+  }
+
+  // No collision, set the new head
+  this.x = x;
+  this.y = y;
   // Now let's move the tail.
   // Start from the beginning of the array, move it to where the head was.
   // Then move the next one to its place etc etc.
@@ -317,6 +383,7 @@ Snake.prototype.move = function move() {
   if (this.size < this.tail.length + 1) {
     this.tail.pop();
   }
+  this.redraw();
 };
 
 // Bind to UI widgets.
@@ -349,6 +416,31 @@ Snake.prototype.freeze = function freeze() {
 // Restart
 Snake.prototype.unfreeze = function unfreeze() {
   this.startTicks();
+};
+
+// Check if snake is occupying the given coordnates
+Snake.prototype.isOccupied = function isOccupied(x, y) {
+  // check if any part of the snake is on [x, y]
+  if (this.x === x && this.y === y) {
+    return true;
+  }
+  for (var i = 0; i < this.tail.length; i++) {
+    var current = this.tail[i];
+    if (current[0] === x && current[1] === y) {
+      return true;
+    }
+  }
+  return false;
+};
+// Collision, game over.
+Snake.prototype.collide = function collide(x, y) {
+  this.dot(x, y,  'red');
+  this.gameOver = true;
+  this.freeze();
+  var button = document.querySelector('#freeze-button');
+  button.onclick = false;
+  button.innerHTML = 'Game over.';
+  button.classList.toggle('disabled');
 };
 
 
