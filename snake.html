@@ -9,6 +9,15 @@
     width: 66em;
     margin: 0 auto;
   }
+  a.common,
+  a.common:visited,
+  a.common:active,
+  a.common:hover {
+    cursor: default;
+    color: inherit;
+    text-decoration:  none;
+  }
+
   .story {
     /* height: 8em; */
   }
@@ -51,7 +60,7 @@
   <div class="page-wrap">
 
     <header>
-      <h1>welcome to ~zladuric</h1>
+      <h1>welcome to <a href="/~zladuric" class="common">~zladuric</a></h1>
 
       <p>Let's make a snake!!</p>
     </header>
@@ -69,6 +78,7 @@
           <li>Now, let's add a script and get a hold of the canvas.</li>
           <li>Fourth, I'm moving the rest of <strong>the making of</strong>
             bellow the canvas so I can always see the game.</li>
+          <li>Note for townies: mail me in town if you have feedback and I don't respond to IRC</li>
         </ul>
         <p><strong>WASD</strong> or arrow keys to move the snake.</p>
       </article>
@@ -77,7 +87,13 @@
           <canvas id="snake" class="snake" width="400" height="400"></canvas>
         </div>
         <div class="cell">
-          <button id="freeze-button">Freeze</button>
+          <p>
+            <button id="freeze-button">Freeze</button>
+            <button id="new-game">New game</button>
+          </p>
+          <p>
+            Score: <span id="score">0</span>
+          </p>
         </div>
       </article>
       <article class="story">
@@ -241,6 +257,47 @@
             <p>Anyway, now we have collision detection.</p>
             <p>Next up, score!</p>
           </li>
+          <li><small> (a while later...)</small>
+            <h4>So, score!</h4>
+            <p>First, some usability fixes - add a "reset/restart game" button.
+            I think we can just forget the current snake and <code>snake = new Snake();</code>
+            . That should cleanly reset everything.
+            </p>
+            <p>Next, score. Every time a snake moves would be a bit too much.
+            But maybe an ultra-silent, fast ticker, that gives one point every
+            10 or so milliseconds? Just to see the counter growing? Let's try.
+            Also, every time to grow a tail part, add X to score. Now, how 
+            much? Let's say just surviving for a second would give you, I don't
+            know, 5 points? And a tail part growing gives you 5 more?
+            </p>
+            <p>Those should be simple, one is a global (snake-global) interval,
+            activated on first time move, and frozen when the game is frozen.
+            The other is triggered on the "grow" interval.
+            </p>
+            <p>Also, display and refresh? Let's just add a simple div and
+            put the number there and update on every update.</p>
+          </li>
+          <li><p>Ok, well. snake = new Snake(); works perfectly. Now I don't
+            have to reload to restart the game.</p>
+            <p>Displaying score every 10 miliseconds is not a problem. But it 
+            feels like the score is growing way too fast. So maybe only have
+            1 score per second. And 5 per tail growth.
+            </p>
+          </li>
+          <li>
+            <p>So the new numbers work way better. We have a bug, we don't resume 
+            on unfreeze, but otherwise scoring is much better now. I want to
+            abstract the UI display away though, so that that happens maybe with
+            a redraw?</p>
+            </p>
+          </li>
+          <li>
+            Also, I've noticed that every time there's a formula or something,
+            first I write the number (e.g. <code>this.score = this.score + 5  * some_calculation</code>).
+            But right after that, I delete it and put it a CAPS constant, e.g. SCORE_PER_SECOND in this case.
+            Not sure why is that. I have a fear of magic numbers, I guess.
+            </li>
+            <li>Bug fixed, it was a stray <code>this.paused = true; </code>.</li>
         </ul>
       <script>
 // Set "constants". I'm not using ES6 or anything here, although I should.
@@ -251,6 +308,15 @@ var DOT_SIZE = 6; // pixels.
 
 var MOVE_INTERVAL = 100; // move every second.
 var GROW_INTERVAL = 5 * MOVE_INTERVAL;
+var SCORE_INTERVAL = 10;
+var ONE_SECOND = 1000;
+var SCORE_PER_SECOND = 1;
+var SCORE_PER_GROWTH = 5;
+
+// Lets bind to that new game button.
+document.querySelector('#new-game').onclick = function() {
+  snake = new Snake();
+};
 
 function Snake() {
    this.width = Math.floor(WIDTH / DOT_SIZE);
@@ -263,18 +329,32 @@ function Snake() {
    this.direction = '';
    this.size = 1;
 
+   // Interval/timeout handles
    this.moveInterval = null;
    this.growInterval = null;
+   this.scoreInterval = null;
+
+   // Dom nodes
+   this.scoreEl = document.querySelector('#score');;
+
    this.gameOver = false;
+   this.score = 0;
+   this.paused = true;
+   this.started = false;
 
    this.canvas = document.querySelector('#snake');
    this.cx = this.canvas.getContext('2d');
    this.redraw();
    this.keyboardListener = new KeyboardListener();
    this.keyboardListener.on('move', function(direction) {
+     // for the first move ever, we need to kick off stuff
      if (direction && this.direction !== direction) {
        console.log('Changing dir:', direction);
        this.direction = direction;
+     }
+     if (!this.started) {
+       this.paused = false;
+       this.started = true;
      }
   }.bind(this));
   this.startTicks();
@@ -328,7 +408,16 @@ Snake.prototype.startTicks = function startTicks() {
   // setup one more, to "grow" the snake length
   this.growInterval = setInterval(function() {
     this.size = this.size + 1;
+    this.score = this.score + SCORE_PER_GROWTH;
   }.bind(this), GROW_INTERVAL);
+  this.scoreInterval = setInterval(function () {
+    if (!this.started || this.paused || this.gameOver) {
+      return;
+    }
+    // we run 100 times per sec, so adjust the score growth to that.
+    this.score = this.score + SCORE_PER_SECOND * (SCORE_INTERVAL / ONE_SECOND);
+    this.scoreEl.innerHTML = Math.round(this.score);
+  }.bind(this), SCORE_INTERVAL);
 }
 
 // Moves our [x, y] coords in the current `direction`.
@@ -408,13 +497,16 @@ Snake.prototype.bindUI = function bindUI() {
 
 // Stop the snake.
 Snake.prototype.freeze = function freeze() {
+  this.paused = true;
   this.direction = '';
   clearInterval(this.moveInterval);
   clearInterval(this.growInterval);
+  clearInterval(this.scoreInterval);
 };
 
 // Restart
 Snake.prototype.unfreeze = function unfreeze() {
+  this.paused = false;
   this.startTicks();
 };
 
